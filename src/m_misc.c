@@ -21,6 +21,11 @@
 //
 //-----------------------------------------------------------------------------
 
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 #include "doomstat.h"
 #include "doomkeys.h"
 #include "m_argv.h"
@@ -58,6 +63,9 @@
 //
 
 static int config_help;         //jff 3/3/98
+#if defined(_WIN32) && (_WIN32_WINNT >= 0x0600)
+extern boolean performance_mode;
+#endif
 // [FG] double click acts as "use"
 extern int dclick_use;
 // [FG] invert vertical axis
@@ -116,6 +124,15 @@ default_t defaults[] = {
     {1}, {0,1}, number, ss_none, wad_no,
     "1 to show help strings about each variable in config file"
   },
+
+#if defined(_WIN32) && (_WIN32_WINNT >= 0x0600)
+  {
+    "performance_mode",
+    (config_t *) &performance_mode, NULL,
+    {0}, {0, 1}, number, ss_none, wad_no,
+    "1 to set process priority to high and processor frequency to 100%"
+  },
+#endif
 
   //
   // Video

@@ -20,6 +20,15 @@
 //
 //-----------------------------------------------------------------------------
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#if (_WIN32_WINNT >= 0x0600)
+#include <powrprof.h>
+#pragma comment(lib, "powrprof.lib")
+#endif
+#endif
+
 #include "SDL.h"
 
 #include "../miniz/miniz.h"
@@ -2067,6 +2076,51 @@ static boolean CheckHaveSSG (void)
   return true;
 }
 
+#if defined(_WIN32) && (_WIN32_WINNT >= 0x0600)
+boolean performance_mode;
+static DWORD proc_min, proc_max;
+static GUID *power_plan;
+
+static void DisablePerformanceMode(void)
+{
+  // Restore the original processor values.
+  PowerWriteACValueIndex(NULL, power_plan, &GUID_PROCESSOR_SETTINGS_SUBGROUP,
+                         &GUID_PROCESSOR_THROTTLE_MINIMUM, proc_min);
+  PowerWriteACValueIndex(NULL, power_plan, &GUID_PROCESSOR_SETTINGS_SUBGROUP,
+                         &GUID_PROCESSOR_THROTTLE_MAXIMUM, proc_max);
+  PowerSetActiveScheme(NULL, power_plan);
+
+  LocalFree(power_plan);
+  power_plan = NULL;
+}
+
+static void EnablePerformanceMode(void)
+{
+  DWORD size = sizeof(DWORD);
+
+  // Set the process priority to high.
+  SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+
+  // Save the original processor values.
+  PowerGetActiveScheme(NULL, &power_plan);
+  PowerReadACValue(NULL, power_plan, &GUID_PROCESSOR_SETTINGS_SUBGROUP,
+                   &GUID_PROCESSOR_THROTTLE_MINIMUM, NULL, (LPBYTE)&proc_min,
+                   &size);
+  PowerReadACValue(NULL, power_plan, &GUID_PROCESSOR_SETTINGS_SUBGROUP,
+                   &GUID_PROCESSOR_THROTTLE_MAXIMUM, NULL, (LPBYTE)&proc_max,
+                   &size);
+
+  // Set the processor frequency to 100%.
+  PowerWriteACValueIndex(NULL, power_plan, &GUID_PROCESSOR_SETTINGS_SUBGROUP,
+                         &GUID_PROCESSOR_THROTTLE_MINIMUM, 100);
+  PowerWriteACValueIndex(NULL, power_plan, &GUID_PROCESSOR_SETTINGS_SUBGROUP,
+                         &GUID_PROCESSOR_THROTTLE_MAXIMUM, 100);
+  PowerSetActiveScheme(NULL, power_plan);
+
+  I_AtExit(DisablePerformanceMode, true);
+}
+#endif
+
 //
 // D_DoomMain
 //
@@ -2550,6 +2604,11 @@ void D_DoomMain(void)
     WritePredefinedLumpWad(myargv[p+1]);
 
   M_LoadDefaults();  // load before initing other systems
+
+#if defined(_WIN32) && (_WIN32_WINNT >= 0x0600)
+  if (performance_mode)
+    EnablePerformanceMode();
+#endif
 
   PrintVersion();
 
