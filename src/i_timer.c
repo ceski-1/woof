@@ -33,6 +33,11 @@ HANDLE hTimer = NULL;
 #include <unistd.h>
 #endif
 
+boolean update_latency;
+uint64_t input_start;
+uint64_t latency[500];
+uint64_t raw_latency;
+
 static uint64_t basecounter = 0;
 static uint64_t basecounter_scaled = 0;
 static uint64_t basefreq = 0;

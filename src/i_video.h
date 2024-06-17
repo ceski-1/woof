@@ -71,6 +71,7 @@ extern boolean drs_skip_frame;
 #define DRS_MIN_HEIGHT 400
 extern boolean dynamic_resolution;
 extern boolean uncapped;
+extern int fpslimit;
 extern int fps;
 extern int custom_fov;    // Custom FOV set by the player.
 extern boolean resetneeded;

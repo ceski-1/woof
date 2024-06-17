@@ -463,15 +463,22 @@ void I_DelayEvent(void)
 // Read the change in mouse state to generate mouse motion events
 //
 
+#include "i_timer.h"
+
 void I_ReadMouse(void)
 {
     int x, y;
     static event_t ev;
 
+    const uint64_t start_time = I_GetTimeUS();
+
     SDL_GetRelativeMouseState(&x, &y);
 
     if (x != 0 || y != 0)
     {
+        update_latency = true;
+        input_start = start_time;
+
         ev.type = ev_mouse;
         ev.data1 = 0;
         ev.data2 = x;

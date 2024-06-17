@@ -84,7 +84,7 @@ boolean toggle_exclusive_fullscreen;
 
 static boolean use_vsync; // killough 2/8/98: controls whether vsync is called
 boolean correct_aspect_ratio;
-static int fpslimit; // when uncapped, limit framerate to this value
+int fpslimit; // when uncapped, limit framerate to this value
 static boolean fullscreen;
 static boolean exclusive_fullscreen;
 static boolean change_display_resolution;
@@ -776,6 +776,19 @@ void I_FinishUpdate(void)
     }
 
     SDL_RenderPresent(renderer);
+
+    if (update_latency)
+    {
+        static int index;
+        raw_latency = I_GetTimeUS() - input_start;
+        latency[index] = raw_latency;
+        index++;
+        if (index >= fpslimit)
+        {
+            index = 0;
+        }
+        update_latency = false;
+    }
 
     I_RestoreDiskBackground();
 

@@ -54,4 +54,9 @@ void I_WaitVBL(int count);
 
 extern int time_scale;
 
+extern boolean update_latency;
+extern uint64_t input_start;
+extern uint64_t latency[500];
+extern uint64_t raw_latency;
+
 #endif

@@ -1233,10 +1233,20 @@ static void HU_widget_build_coord (void)
 
 static void HU_widget_build_fps (void)
 {
-  char hud_fpsstr[HU_MAXLINELENGTH/4];
+  char hud_fpsstr[HU_MAXLINELENGTH];
 
-  M_snprintf(hud_fpsstr, sizeof(hud_fpsstr), "\x1b%c%d \x1b%cFPS",
-             '0'+CR_GRAY, fps, '0'+CR_ORIG);
+  const int count = uncapped && fpslimit ? fpslimit : 35;
+  uint64_t sum = 0;
+  for (int i = 0; i < fpslimit; i++)
+  {
+    sum += latency[i];
+  }
+
+  M_snprintf(hud_fpsstr, sizeof(hud_fpsstr), "\x1b%c%d \x1b%cFPS   "
+             "INPUT-TO-PRESENT RAW \x1b%c%5.3f \x1b%cMS AVG \x1b%c%5.3f \x1b%cMS",
+             '0'+CR_GRAY, fps, '0'+CR_ORIG,
+             '0'+CR_GRAY, (float)raw_latency * 0.001f, '0'+CR_ORIG,
+             '0'+CR_GRAY, (float)sum / (count * 1000), '0'+CR_ORIG);
   HUlib_add_string_to_cur_line(&w_fps, hud_fpsstr);
 }
 
