@@ -226,6 +226,11 @@ if(libxmp_FOUND)
     target_link_libraries(woof PRIVATE libxmp::xmp)
 endif()
 
+if(ittnotify_FOUND)
+    target_sources(woof PRIVATE i_video.c)
+    target_link_libraries(woof PRIVATE ittnotify::itt)
+endif()
+
 # Optional features.
 #
 # Our defines are not namespaced, so we pass them at compile-time instead of

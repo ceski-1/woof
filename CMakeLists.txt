@@ -105,6 +105,17 @@ if(libxmp_FOUND)
     endif()
 endif()
 
+find_package(ittnotify REQUIRED)
+if(ittnotify_FOUND)
+    if(NOT TARGET ittnotify::itt)
+        if(TARGET ittnotify::itt_shared)
+            add_library(ittnotify::itt ALIAS ittnotify::itt_shared)
+        else()
+            add_library(ittnotify::itt ALIAS ittnotify::itt_static)
+        endif()
+    endif()
+endif()
+
 # Python 3
 find_package(Python3 COMPONENTS Interpreter)
 

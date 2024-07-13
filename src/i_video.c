@@ -23,6 +23,7 @@
 #  include <windows.h>
 #endif
 
+#include "ittnotify.h"
 #include "SDL.h"
 
 #include <limits.h>
@@ -133,6 +134,15 @@ static boolean grabmouse = true, default_grabmouse;
 boolean screenvisible = true;
 
 boolean drs_skip_frame;
+
+static __itt_domain *domain;
+static __itt_string_handle *present_task;
+static __itt_string_handle *pump_tic;
+static __itt_string_handle *pump_disp;
+#define PUMP_LIMITER 1
+#if PUMP_LIMITER
+static __itt_string_handle *pump_limiter;
+#endif
 
 void *I_GetSDLWindow(void)
 {
@@ -525,7 +535,9 @@ static void I_GetEvent(void)
 
     I_DelayEvent();
 
+    __itt_task_begin(domain, __itt_null, __itt_null, pump_tic);
     SDL_PumpEvents();
+    __itt_task_end(domain); // pump_tic
 
     while (true)
     {
@@ -625,7 +637,9 @@ void I_StartTic(void)
 
 void I_StartDisplay(void)
 {
+    __itt_task_begin(domain, __itt_null, __itt_null, pump_disp);
     SDL_PumpEvents();
+    __itt_task_end(domain); // pump_disp
 
     if (window_focused)
     {
@@ -643,7 +657,7 @@ void I_StartDisplay(void)
 //
 void I_StartFrame(void)
 {
-    ;
+    __itt_task_begin(domain, __itt_null, __itt_null, present_task);
 }
 
 static void UpdateRender(void)
@@ -815,6 +829,8 @@ void I_FinishUpdate(void)
 
     SDL_RenderPresent(renderer);
 
+    __itt_task_end(domain); // present_task
+
     I_RestoreDiskBackground();
 
     if (window_resize)
@@ -829,6 +845,9 @@ void I_FinishUpdate(void)
     if (use_limiter)
     {
         uint64_t target_time = 1000000ull / targetrefresh;
+#if PUMP_LIMITER
+        uint64_t last_pump = 0;
+#endif
 
         while (true)
         {
@@ -841,7 +860,20 @@ void I_FinishUpdate(void)
                 break;
             }
 
+#if PUMP_LIMITER
+            uint64_t remaining_time = target_time - elapsed_time;
+
+            if (remaining_time > 200 && current_time - last_pump > 200)
+            {
+                last_pump = current_time;
+                __itt_task_begin(domain, __itt_null, __itt_null, pump_limiter);
+                SDL_PumpEvents();
+                __itt_task_end(domain); // pump_limiter
+            }
+            else if (remaining_time > 1000)
+#else
             if (target_time - elapsed_time > 1000)
+#endif
             {
                 I_SleepUS(500);
             }
@@ -1849,6 +1881,14 @@ void I_InitGraphics(void)
 
     // clear out events waiting at the start and center the mouse
     I_ResetRelativeMouseState();
+
+    domain = __itt_domain_create("Woof.Domain");
+    present_task = __itt_string_handle_create("Task: I_StartFrame to SDL_RenderPresent");
+    pump_tic = __itt_string_handle_create("Task: SDL_PumpEvents in I_StartTic");
+    pump_disp = __itt_string_handle_create("Task: SDL_PumpEvents in I_StartDisplay");
+#if PUMP_LIMITER
+    pump_limiter = __itt_string_handle_create("Task: SDL_PumpEvents in I_FinishUpdate");
+#endif
 }
 
 void I_BindVideoVariables(void)
